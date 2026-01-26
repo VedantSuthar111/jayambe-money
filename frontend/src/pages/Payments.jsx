@@ -173,8 +173,8 @@ const PaymentsPage = ({ invoices, payments, loading, error, onRecordPayment }) =
         ) : payments.length === 0 ? (
           <p className="text-sm text-white/70">No payments yet.</p>
         ) : (
-          <div className="space-y-3">
-            {payments.slice(0, 12).map((payment) => (
+          <div className="space-y-3 max-h-96 hover-scrollbar pr-1">
+            {payments.map((payment) => (
               <article
                 key={payment.id}
                 className="rounded-2xl border border-white/10 bg-slate-900/40 p-4"

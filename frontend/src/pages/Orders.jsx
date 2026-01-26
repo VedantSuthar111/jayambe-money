@@ -106,6 +106,7 @@ const OrdersPage = () => {
     }
   };
 
+
   const subtotal = items.reduce((sum, it) => sum + (Number(it.quantity || 0) * Number(it.rate || 0)), 0);
   const taxAmount = gstRegistered ? subtotal * (Number(gstPercent || 0) / 100) : 0;
   const total = subtotal + taxAmount;
@@ -266,20 +267,22 @@ const OrdersPage = () => {
           {recent.length === 0 ? (
             <p className="text-sm text-white/70">No recent orders</p>
           ) : (
-            recent.map((inv) => (
-              <article key={inv.id} className="rounded-2xl border border-white/10 bg-slate-900/40 p-4">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-lg font-semibold text-white">{inv.number}</p>
-                    <p className="text-xs text-white/60">{inv.customer_name || inv.customerName}</p>
+            <div className="max-h-96 hover-scrollbar pr-1">
+              {recent.map((inv) => (
+                <article key={inv.id} className="rounded-2xl border border-white/10 bg-slate-900/40 p-4 mb-3 last:mb-0">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-lg font-semibold text-white">{inv.number}</p>
+                      <p className="text-xs text-white/60">{inv.customer_name || inv.customerName}</p>
+                    </div>
+                    <div className="text-right text-white">
+                      <p className="text-lg font-semibold">₹ {Number(inv.total || inv.totalAmount || 0).toFixed(2)}</p>
+                      <p className="text-xs text-white/60">{new Date(inv.created_at || inv.createdAt).toLocaleDateString()}</p>
+                    </div>
                   </div>
-                  <div className="text-right text-white">
-                    <p className="text-lg font-semibold">₹ {Number(inv.total || inv.totalAmount || 0).toFixed(2)}</p>
-                    <p className="text-xs text-white/60">{new Date(inv.created_at || inv.createdAt).toLocaleDateString()}</p>
-                  </div>
-                </div>
-              </article>
-            ))
+                </article>
+              ))}
+            </div>
           )}
         </div>
       </aside>

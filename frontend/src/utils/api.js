@@ -35,6 +35,12 @@ export const createOrder = (payload) =>
     body: JSON.stringify(payload)
   });
 
+export const previewOrder = (payload) =>
+  request('/orders/preview', {
+    method: 'POST',
+    body: JSON.stringify(payload)
+  });
+
 export const recordPayment = (payload) =>
   request('/payments', {
     method: 'POST',

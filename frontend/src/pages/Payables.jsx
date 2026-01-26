@@ -156,8 +156,8 @@ const PayablesPage = ({ payables, loading, error, onCreatePayable }) => {
           ) : payables.length === 0 ? (
             <p className="text-sm text-white/70">No supplier bills yet.</p>
           ) : (
-            <div className="space-y-3">
-              {payables.slice(0, 12).map((bill) => (
+            <div className="space-y-3 max-h-96 hover-scrollbar pr-1">
+              {payables.map((bill) => (
                 <article
                   key={bill.id}
                   className="rounded-2xl border border-white/10 bg-slate-900/40 p-4"

@@ -250,8 +250,8 @@ const InvoicesPage = ({ invoices, loading, error, onCreateInvoice }) => {
         ) : invoices.length === 0 ? (
           <p className="text-sm text-white/70">No invoices yet.</p>
         ) : (
-          <div className="space-y-3">
-            {invoices.slice(0, 10).map((invoice) => (
+          <div className="space-y-3 max-h-96 hover-scrollbar pr-1">
+            {invoices.map((invoice) => (
               <article
                 key={invoice.id}
                 className="rounded-2xl border border-white/10 bg-slate-900/40 p-4"
