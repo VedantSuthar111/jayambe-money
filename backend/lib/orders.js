@@ -10,6 +10,7 @@ const createOrder = (payload = {}) => {
     items: payload.items || [],
     customerName: payload.customerName || 'Walk-in Customer',
     customerEmail: payload.customerEmail || '',
+    customerGSTIN: payload.customerGSTIN || '',
     createdAt: new Date().toISOString(),
     note: payload.note || ''
   };
