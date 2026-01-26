@@ -8,6 +8,7 @@ const OrdersPage = () => {
   const [customerName, setCustomerName] = useState('');
   const [customerEmail, setCustomerEmail] = useState('');
   const [customerPhone, setCustomerPhone] = useState('');
+  const [customerGSTIN, setCustomerGSTIN] = useState('');
   const [createdAt, setCreatedAt] = useState('');
   const [dueDate, setDueDate] = useState('');
   const [gstRegistered, setGstRegistered] = useState(true);
@@ -70,6 +71,7 @@ const OrdersPage = () => {
         customerName,
         customerEmail,
         customerPhone,
+        customerGSTIN,
         note,
         createdAt: createdAt ? new Date(createdAt).toISOString() : undefined,
         dueDate: dueDate ? new Date(dueDate).toISOString() : null,
@@ -98,6 +100,7 @@ const OrdersPage = () => {
       setCustomerName('');
       setCustomerEmail('');
       setCustomerPhone('');
+      setCustomerGSTIN('');
       setNote('');
     } catch (err) {
       setError(err.message || 'Failed to create order');
@@ -161,6 +164,11 @@ const OrdersPage = () => {
           <label className="text-sm font-medium text-slate-700">
             Customer phone
             <input value={customerPhone} onChange={(e) => setCustomerPhone(e.target.value)} className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm" placeholder="e.g. +919876543210" />
+          </label>
+
+          <label className="text-sm font-medium text-slate-700">
+            Customer GSTIN (Optional)
+            <input value={customerGSTIN} onChange={(e) => setCustomerGSTIN(e.target.value)} className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm" placeholder="e.g. 24AWVPS9710Q1ZD" />
           </label>
 
           <div>

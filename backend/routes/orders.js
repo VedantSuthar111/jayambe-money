@@ -101,7 +101,7 @@ async function generateBillPdf(order, invoice) {
   doc.moveTo(detailX, y + 14).lineTo(detailX + pageWidth, y + 14).stroke();
   
   doc.font('Helvetica').fontSize(7);
-  const billToDetails = `Name: ${order.customerName || 'N/A'}\nGSTIN: N/A\nState: Gujarat (24)`;
+  const billToDetails = `Name: ${order.customerName || 'N/A'}\nGSTIN: ${order.customerGSTIN || 'N/A'}\nState: Gujarat (24)`;
   const shipToDetails = `Name:\nVoucher Ref:\nState: Gujarat (24)`;
   
   doc.text(billToDetails, detailX + 3, y + 18, { width: billToColWidth - 6 });
@@ -345,6 +345,7 @@ router.post('/', async (req, res) => {
       customerName: invoice.customerName || invoice.customer_name,
       customerEmail: invoice.customerEmail || invoice.customer_email,
       customerPhone: invoice.customerPhone || invoice.customer_phone || '',
+      customerGSTIN: invoice.customerGSTIN || invoice.customer_gstin || '',
       createdAt: invoice.createdAt || invoice.created_at,
       note: invoice.notes || invoice.note || ''
     };
@@ -363,6 +364,7 @@ router.post('/preview', async (req, res) => {
       customerName: 'Preview Customer',
       customerEmail: 'preview@example.com',
       customerPhone: '+911234567890',
+      customerGSTIN: '',
       items: [{ description: 'Preview item', quantity: 1, rate: 1000 }],
       note: 'Preview only',
       createdAt: new Date().toISOString(),
@@ -373,6 +375,7 @@ router.post('/preview', async (req, res) => {
       customerName: payload.customerName || defaults.customerName,
       customerEmail: payload.customerEmail || defaults.customerEmail,
       customerPhone: payload.customerPhone || defaults.customerPhone,
+      customerGSTIN: payload.customerGSTIN || defaults.customerGSTIN,
       items: Array.isArray(payload.items) && payload.items.length > 0 ? payload.items : defaults.items,
       note: payload.note || defaults.note,
       createdAt: payload.createdAt || defaults.createdAt,
@@ -395,6 +398,7 @@ router.post('/preview', async (req, res) => {
       customerName: merged.customerName,
       customerEmail: merged.customerEmail,
       customerPhone: merged.customerPhone,
+      customerGSTIN: merged.customerGSTIN,
       createdAt: merged.createdAt,
       note: merged.note
     };
