@@ -2,6 +2,12 @@ const express = require('express');
 const PDFDocument = require('pdfkit');
 const store = require('../lib/store');
 const router = express.Router();
+
+// Middleware to log all requests to orders route
+router.use((req, res, next) => {
+  console.log(`[ORDERS ROUTE] ${req.method} ${req.path} - Body:`, JSON.stringify(req.body, null, 2));
+  next();
+});
 async function generateBillPdf(order, invoice) {
   const doc = new PDFDocument({ size: 'A4', margin: 20, bufferPages: true });
 
@@ -101,7 +107,9 @@ async function generateBillPdf(order, invoice) {
   doc.moveTo(detailX, y + 14).lineTo(detailX + pageWidth, y + 14).stroke();
   
   doc.font('Helvetica').fontSize(7);
-  const billToDetails = `Name: ${order.customerName || 'N/A'}\nGSTIN: ${order.customerGSTIN || 'N/A'}\nState: Gujarat (24)`;
+  // Display GSTIN only if it exists and is not empty, otherwise show N/A
+  const gstinDisplay = (order.customerGSTIN && String(order.customerGSTIN).trim()) ? String(order.customerGSTIN).trim() : 'N/A';
+  const billToDetails = `Name: ${order.customerName || 'N/A'}\nGSTIN: ${gstinDisplay}\nState: Gujarat (24)`;
   const shipToDetails = `Name:\nVoucher Ref:\nState: Gujarat (24)`;
   
   doc.text(billToDetails, detailX + 3, y + 18, { width: billToColWidth - 6 });
@@ -315,7 +323,9 @@ async function generateBillPdf(order, invoice) {
 
 router.post('/', async (req, res) => {
   try {
+    console.log('=== ORDER CREATION REQUEST RECEIVED ===');
     const payload = req.body || {};
+    console.log('Request payload:', JSON.stringify(payload, null, 2));
     if (!payload.customerName || String(payload.customerName).trim() === '') {
       return res.status(400).json({ error: 'Customer name is required' });
     }
@@ -339,20 +349,38 @@ router.post('/', async (req, res) => {
     }
 
     const invoice = await store.createOrder(payload);
+    // Debug log to inspect invoice object and GSTIN fields
+    console.log('Payload GSTIN:', payload.customerGSTIN);
+    console.log('Invoice object:', JSON.stringify(invoice, null, 2));
+    console.log('GSTIN fields:', {
+      customerGSTIN: invoice.customerGSTIN,
+      customer_gstin: invoice.customer_gstin,
+      gstin: invoice.gstin
+    });
+    // Helper to get GSTIN value, handling null, undefined, and empty string
+    const getGSTIN = (inv) => {
+      const gstin = inv.customerGSTIN || inv.customer_gstin || inv.gstin;
+      const result = (gstin && String(gstin).trim()) || '';
+      console.log('getGSTIN result:', result, 'from:', { customerGSTIN: inv.customerGSTIN, customer_gstin: inv.customer_gstin, gstin: inv.gstin });
+      return result;
+    };
     const order = {
       id: invoice.id,
       items: invoice.lineItems || invoice.line_items || [],
       customerName: invoice.customerName || invoice.customer_name,
       customerEmail: invoice.customerEmail || invoice.customer_email,
       customerPhone: invoice.customerPhone || invoice.customer_phone || '',
-      customerGSTIN: invoice.customerGSTIN || invoice.customer_gstin || '',
+      customerGSTIN: getGSTIN(invoice),
       createdAt: invoice.createdAt || invoice.created_at,
       note: invoice.notes || invoice.note || ''
     };
+    console.log('Final order GSTIN:', order.customerGSTIN);
 
     const pdfBuffer = await generateBillPdf(order, invoice);
+    console.log('=== ORDER CREATION SUCCESSFUL ===');
     res.json({ invoice, billPdfBase64: pdfBuffer.toString('base64') });
   } catch (err) {
+    console.error('=== ORDER CREATION ERROR ===', err);
     res.status(500).json({ error: err.message });
   }
 });

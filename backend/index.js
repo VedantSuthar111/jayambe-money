@@ -14,14 +14,34 @@ const PREFERRED_PORT = Number(process.env.PORT) || 4000;
 
 const app = express();
 
+// Log all incoming requests
+app.use((req, res, next) => {
+  console.log(`[SERVER] ${new Date().toISOString()} - ${req.method} ${req.url}`);
+  next();
+});
+
 app.use(cors());
 app.use(express.json({ limit: '1mb' }));
 
+// Log after body parsing
+app.use((req, res, next) => {
+  if (req.method === 'POST' || req.method === 'PUT') {
+    console.log(`[SERVER] Request body parsed:`, JSON.stringify(req.body, null, 2));
+  }
+  next();
+});
+
 app.get('/health', (_req, res) => {
+  console.log('[HEALTH CHECK] Request received');
   res.json({
     status: 'ok',
     uptime: process.uptime()
   });
+});
+
+app.get('/api/test', (_req, res) => {
+  console.log('[TEST ENDPOINT] Request received');
+  res.json({ message: 'Test endpoint working', timestamp: new Date().toISOString() });
 });
 
 app.get('/api/dashboard/metrics', async (_req, res) => {
@@ -74,6 +94,8 @@ async function start() {
 
     app.listen(port, () => {
       console.log(`Jay Ambe API listening on http://localhost:${port}`);
+      console.log(`Orders endpoint: http://localhost:${port}/api/orders`);
+      console.log('Server is ready to receive requests...');
     });
   } catch (err) {
     console.error('Failed to start server:', err);

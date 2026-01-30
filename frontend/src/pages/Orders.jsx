@@ -78,7 +78,10 @@ const OrdersPage = () => {
         taxes: gstRegistered && Number(gstPercent) > 0 ? [{ label: 'GST', percent: Number(gstPercent) }] : []
       };
 
+      console.log('[ORDERS PAGE] Creating order with payload:', payload);
+      console.log('[ORDERS PAGE] GSTIN value:', customerGSTIN);
       const resp = await createOrder(payload);
+      console.log('[ORDERS PAGE] Order created successfully:', resp);
 
       // resp.billPdfBase64 contains base64 PDF; trigger download
       if (resp && resp.billPdfBase64) {
