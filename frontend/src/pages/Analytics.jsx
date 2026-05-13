@@ -22,6 +22,8 @@ const formatCurrency = (value = 0) =>
     maximumFractionDigits: 0
   }).format(Number(value) || 0);
 
+const API_BASE = import.meta.env.VITE_API_BASE || '/api';
+
 const AnalyticsPage = ({ metrics, invoices, payments, payables, loading, error }) => {
   const [downloading, setDownloading] = useState(false);
   const topInvoices = useMemo(
@@ -150,8 +152,16 @@ const AnalyticsPage = ({ metrics, invoices, payments, payables, loading, error }
           onClick={async () => {
             try {
               setDownloading(true);
-              const resp = await fetch('/api/analytics/customers.csv');
+              const resp = await fetch(`${API_BASE}/analytics/customers.csv`, {
+                headers: {
+                  Accept: 'text/csv'
+                }
+              });
               if (!resp.ok) throw new Error('Failed to download');
+              const contentType = (resp.headers.get('content-type') || '').toLowerCase();
+              if (contentType.includes('text/html')) {
+                throw new Error('Received HTML instead of CSV. Check API base and deployment routing.');
+              }
               const blob = await resp.blob();
               const url = window.URL.createObjectURL(blob);
               const a = document.createElement('a');
