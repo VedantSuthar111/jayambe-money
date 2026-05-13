@@ -107,6 +107,29 @@ const AnalyticsPage = ({ metrics, invoices, payments, payables, loading, error }
     return { labels, data: labels.map((l) => Math.round(map[l] || 0)) };
   }, [payments]);
 
+  // Daily Hisab: Group invoices by date
+  const dailyHisab = useMemo(() => {
+    const groups = {};
+    (invoices || []).forEach((invoice) => {
+      const date = invoice.createdAt ? invoice.createdAt.split('T')[0] : new Date().toISOString().split('T')[0];
+      if (!groups[date]) {
+        groups[date] = { invoices: [], total: 0, balance: 0, count: 0 };
+      }
+      groups[date].invoices.push(invoice);
+      groups[date].total += Number(invoice.total || 0);
+      groups[date].balance += Number(invoice.balanceDue || 0);
+      groups[date].count += 1;
+    });
+    // Sort dates in descending order (newest first) and limit to last 30 days
+    return Object.keys(groups)
+      .sort((a, b) => new Date(b) - new Date(a))
+      .slice(0, 30)
+      .reduce((acc, date) => {
+        acc[date] = groups[date];
+        return acc;
+      }, {});
+  }, [invoices]);
+
   return (
     <div className="mx-auto w-full max-w-6xl px-4 py-12 text-white">
       <header className="mb-10 rounded-[32px] border border-white/10 bg-gradient-to-br from-white/10 via-white/5 to-transparent p-10 shadow-2xl shadow-emerald-950/20 backdrop-blur">
@@ -374,6 +397,57 @@ const AnalyticsPage = ({ metrics, invoices, payments, payables, loading, error }
                 }}
                 options={{ maintainAspectRatio: false, plugins: { legend: { display: true } }, scales: { y: { beginAtZero: true } } }}
               />
+            </div>
+          )}
+        </article>
+      </section>
+
+      {/* Daily Hisab Section */}
+      <section className="mt-8">
+        <article className="rounded-3xl border border-white/5 bg-white/90 p-6 text-slate-900 shadow-xl shadow-slate-950/30">
+          <header className="mb-4">
+            <p className="text-xs uppercase tracking-[0.3em] text-emerald-600">Daily Hisab</p>
+            <h2 className="text-2xl font-semibold">Day-wise invoice summary</h2>
+          </header>
+          {loading ? (
+            <p className="text-sm text-slate-500">Loading daily hisab…</p>
+          ) : Object.keys(dailyHisab).length === 0 ? (
+            <p className="text-sm text-slate-500">No invoice data yet.</p>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead className="border-b-2 border-slate-300 bg-slate-50">
+                  <tr>
+                    <th className="px-4 py-3 text-left font-semibold">Date</th>
+                    <th className="px-4 py-3 text-center font-semibold">Count</th>
+                    <th className="px-4 py-3 text-right font-semibold">Daily Total</th>
+                    <th className="px-4 py-3 text-right font-semibold">Balance Due</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-200">
+                  {Object.entries(dailyHisab).map(([date, data]) => {
+                    const dateObj = new Date(date);
+                    const formattedDate = dateObj.toLocaleDateString('en-IN', {
+                      weekday: 'short',
+                      year: 'numeric',
+                      month: 'short',
+                      day: 'numeric'
+                    });
+                    return (
+                      <tr key={date} className="hover:bg-slate-50">
+                        <td className="px-4 py-3 font-medium">{formattedDate}</td>
+                        <td className="px-4 py-3 text-center text-slate-600">{data.count}</td>
+                        <td className="px-4 py-3 text-right font-semibold text-emerald-700">
+                          {formatCurrency(data.total)}
+                        </td>
+                        <td className="px-4 py-3 text-right font-semibold text-amber-700">
+                          {formatCurrency(data.balance)}
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
             </div>
           )}
         </article>

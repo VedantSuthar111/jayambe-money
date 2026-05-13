@@ -11,10 +11,12 @@ const formatCurrency = (value = 0) =>
   }).format(Number(value) || 0);
 
 const InvoicesPage = ({ invoices, loading, error, onCreateInvoice }) => {
+  const getTodayDate = () => new Date().toISOString().split('T')[0];
+
   const [form, setForm] = useState({
     type: 'final',
     customerName: '',
-    dueDate: '',
+    createdAt: getTodayDate(),
     status: 'draft',
     notes: '',
     lineItems: [createLineItem()],
@@ -37,6 +39,25 @@ const InvoicesPage = ({ invoices, loading, error, onCreateInvoice }) => {
       total: subtotal + taxAmount
     };
   }, [form.lineItems, form.taxes]);
+
+  // Group invoices by date (hisab per day)
+  const groupedInvoices = useMemo(() => {
+    const groups = {};
+    (invoices || []).forEach((invoice) => {
+      const date = invoice.createdAt ? invoice.createdAt.split('T')[0] : new Date().toISOString().split('T')[0];
+      if (!groups[date]) {
+        groups[date] = [];
+      }
+      groups[date].push(invoice);
+    });
+    // Sort dates in descending order (newest first)
+    return Object.keys(groups)
+      .sort((a, b) => new Date(b) - new Date(a))
+      .reduce((acc, date) => {
+        acc[date] = groups[date];
+        return acc;
+      }, {});
+  }, [invoices]);
 
   const setField = (field, value) => {
     setForm((prev) => ({ ...prev, [field]: value }));
@@ -69,11 +90,16 @@ const InvoicesPage = ({ invoices, loading, error, onCreateInvoice }) => {
     event.preventDefault();
     setSaving(true);
     try {
-      await onCreateInvoice(form);
+      // Convert dates to ISO string if provided
+      const payload = {
+        ...form,
+        createdAt: form.createdAt ? new Date(form.createdAt).toISOString() : undefined
+      };
+      await onCreateInvoice(payload);
       setForm({
         ...form,
         customerName: '',
-        dueDate: '',
+        createdAt: getTodayDate(),
         notes: '',
         lineItems: [createLineItem()],
         taxes: [createTax()]
@@ -133,12 +159,12 @@ const InvoicesPage = ({ invoices, loading, error, onCreateInvoice }) => {
               />
             </label>
             <label className="text-sm font-medium text-slate-700">
-              Due Date
+              Invoice Date
               <input
                 type="date"
-                value={form.dueDate}
+                value={form.createdAt}
                 className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
-                onChange={(event) => setField('dueDate', event.target.value)}
+                onChange={(event) => setField('createdAt', event.target.value)}
               />
             </label>
           </div>
@@ -241,40 +267,62 @@ const InvoicesPage = ({ invoices, loading, error, onCreateInvoice }) => {
       <section className="rounded-3xl border border-white/10 bg-white/5 p-8 shadow-2xl shadow-slate-950/30 backdrop-blur">
         <header className="mb-6">
           <p className="text-xs uppercase tracking-[0.3em] text-white/70">
-            Recent Invoices
+            Daily Hisab
           </p>
-          <h2 className="mt-2 text-2xl font-semibold">Live list</h2>
+          <h2 className="mt-2 text-2xl font-semibold">Invoices by Date</h2>
         </header>
         {loading ? (
           <p className="text-sm text-white/70">Loading invoices…</p>
         ) : invoices.length === 0 ? (
           <p className="text-sm text-white/70">No invoices yet.</p>
         ) : (
-          <div className="space-y-3 max-h-96 hover-scrollbar pr-1">
-            {invoices.map((invoice) => (
-              <article
-                key={invoice.id}
-                className="rounded-2xl border border-white/10 bg-slate-900/40 p-4"
-              >
-                <div className="flex flex-wrap items-center justify-between gap-3">
-                  <div>
-                    <p className="text-lg font-semibold">{invoice.number}</p>
-                    <p className="text-xs text-white/60">
-                      {invoice.customerName} · {invoice.type.toUpperCase()} ·{' '}
-                      {invoice.status}
-                    </p>
+          <div className="space-y-6 max-h-96 hover-scrollbar pr-1">
+            {Object.entries(groupedInvoices).map(([date, dayInvoices]) => {
+              const dateObj = new Date(date);
+              const formattedDate = dateObj.toLocaleDateString('en-IN', {
+                weekday: 'short',
+                year: 'numeric',
+                month: 'short',
+                day: 'numeric'
+              });
+              const dayTotal = dayInvoices.reduce((sum, inv) => sum + Number(inv.total || 0), 0);
+              const dayBalance = dayInvoices.reduce((sum, inv) => sum + Number(inv.balanceDue || 0), 0);
+
+              return (
+                <div key={date} className="rounded-2xl border border-white/10 bg-slate-900/40 p-4">
+                  <div className="mb-3 flex items-center justify-between">
+                    <h3 className="font-semibold text-white">{formattedDate}</h3>
+                    <div className="text-right text-xs text-white/60">
+                      {dayInvoices.length} invoice{dayInvoices.length !== 1 ? 's' : ''}
+                    </div>
                   </div>
-                  <div className="text-right">
-                    <p className="text-lg font-semibold">
-                      {formatCurrency(invoice.total)}
-                    </p>
-                    <p className="text-xs text-white/60">
-                      Balance {formatCurrency(invoice.balanceDue)}
-                    </p>
+                  <div className="space-y-2 border-t border-white/10 pt-3">
+                    {dayInvoices.map((invoice) => (
+                      <div key={invoice.id} className="flex flex-wrap items-center justify-between gap-2 text-xs">
+                        <div>
+                          <p className="font-medium text-white">{invoice.number}</p>
+                          <p className="text-white/60">{invoice.customerName}</p>
+                        </div>
+                        <div className="text-right">
+                          <p className="font-medium text-white">{formatCurrency(invoice.total)}</p>
+                          <p className="text-white/60">Bal: {formatCurrency(invoice.balanceDue)}</p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                  <div className="mt-3 border-t border-white/10 pt-3 text-sm font-semibold text-white/80">
+                    <div className="flex justify-between">
+                      <span>Day Total:</span>
+                      <span>{formatCurrency(dayTotal)}</span>
+                    </div>
+                    <div className="flex justify-between text-white/60">
+                      <span>Balance:</span>
+                      <span>{formatCurrency(dayBalance)}</span>
+                    </div>
                   </div>
                 </div>
-              </article>
-            ))}
+              );
+            })}
           </div>
         )}
       </section>

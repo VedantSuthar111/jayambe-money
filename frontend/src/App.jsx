@@ -2,7 +2,6 @@ import { useEffect, useState } from 'react';
 import { Navigate, Route, Routes } from 'react-router-dom';
 import Home from './pages/Home';
 import AppShell from './components/AppShell';
-// Invoices page removed — Orders now creates invoices automatically
 import PaymentsPage from './pages/Payments';
 import PayablesPage from './pages/Payables';
 import AnalyticsPage from './pages/Analytics';

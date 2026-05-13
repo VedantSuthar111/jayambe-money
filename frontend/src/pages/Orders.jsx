@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import { createOrder, fetchInvoices } from '../utils/api';
 
 const EmptyItem = () => ({ description: '', quantity: 1, rate: 0 });
@@ -118,6 +118,25 @@ const OrdersPage = () => {
   const total = subtotal + taxAmount;
 
   const [recent, setRecent] = useState([]);
+
+  // Group invoices by date (hisab per day)
+  const groupedInvoices = useMemo(() => {
+    const groups = {};
+    (recent || []).forEach((invoice) => {
+      const date = invoice.createdAt || invoice.created_at ? (invoice.createdAt || invoice.created_at).split('T')[0] : new Date().toISOString().split('T')[0];
+      if (!groups[date]) {
+        groups[date] = [];
+      }
+      groups[date].push(invoice);
+    });
+    // Sort dates in descending order (newest first)
+    return Object.keys(groups)
+      .sort((a, b) => new Date(b) - new Date(a))
+      .reduce((acc, date) => {
+        acc[date] = groups[date];
+        return acc;
+      }, {});
+  }, [recent]);
 
   const loadRecent = async () => {
     try {
@@ -271,28 +290,59 @@ const OrdersPage = () => {
 
       <aside className="rounded-3xl border border-white/10 bg-white/5 p-8 shadow-2xl shadow-slate-950/30 backdrop-blur">
         <header className="mb-6">
-          <p className="text-xs uppercase tracking-[0.3em] text-white/70">Recent</p>
-          <h2 className="mt-2 text-2xl font-semibold">Recent Orders / Invoices</h2>
+          <p className="text-xs uppercase tracking-[0.3em] text-white/70">Daily Hisab</p>
+          <h2 className="mt-2 text-2xl font-semibold">Invoices by date</h2>
         </header>
         <div className="space-y-3">
           {recent.length === 0 ? (
-            <p className="text-sm text-white/70">No recent orders</p>
+            <p className="text-sm text-white/70">No invoices yet</p>
           ) : (
             <div className="max-h-96 hover-scrollbar pr-1">
-              {recent.map((inv) => (
-                <article key={inv.id} className="rounded-2xl border border-white/10 bg-slate-900/40 p-4 mb-3 last:mb-0">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-lg font-semibold text-white">{inv.number}</p>
-                      <p className="text-xs text-white/60">{inv.customer_name || inv.customerName}</p>
+              {Object.entries(groupedInvoices).map(([date, dayInvoices]) => {
+                const dateObj = new Date(date);
+                const formattedDate = dateObj.toLocaleDateString('en-IN', {
+                  weekday: 'short',
+                  year: 'numeric',
+                  month: 'short',
+                  day: 'numeric'
+                });
+                const dayTotal = dayInvoices.reduce((sum, inv) => sum + Number(inv.total || inv.totalAmount || 0), 0);
+                const dayBalance = dayInvoices.reduce((sum, inv) => sum + Number(inv.balanceDue || inv.balance_due || inv.total || 0), 0);
+
+                return (
+                  <div key={date} className="rounded-2xl border border-white/10 bg-slate-900/40 p-4 mb-3 last:mb-0">
+                    <div className="mb-2 flex items-center justify-between">
+                      <h3 className="font-semibold text-white">{formattedDate}</h3>
+                      <div className="text-right text-xs text-white/60">
+                        {dayInvoices.length} invoice{dayInvoices.length !== 1 ? 's' : ''}
+                      </div>
                     </div>
-                    <div className="text-right text-white">
-                      <p className="text-lg font-semibold">₹ {Number(inv.total || inv.totalAmount || 0).toFixed(2)}</p>
-                      <p className="text-xs text-white/60">{new Date(inv.created_at || inv.createdAt).toLocaleDateString()}</p>
+                    <div className="space-y-1 border-t border-white/10 pt-2">
+                      {dayInvoices.map((invoice) => (
+                        <div key={invoice.id} className="flex flex-wrap items-center justify-between gap-2 text-xs">
+                          <div>
+                            <p className="font-medium text-white">{invoice.number}</p>
+                            <p className="text-white/60">{invoice.customer_name || invoice.customerName}</p>
+                          </div>
+                          <div className="text-right">
+                            <p className="text-sm font-medium text-white">₹ {Number(invoice.total || invoice.totalAmount || 0).toFixed(2)}</p>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                    <div className="mt-2 border-t border-white/10 pt-2 text-xs font-semibold text-white/80">
+                      <div className="flex justify-between">
+                        <span>Day Total:</span>
+                        <span>₹ {dayTotal.toFixed(2)}</span>
+                      </div>
+                      <div className="flex justify-between text-white/60">
+                        <span>Balance:</span>
+                        <span>₹ {dayBalance.toFixed(2)}</span>
+                      </div>
                     </div>
                   </div>
-                </article>
-              ))}
+                );
+              })}
             </div>
           )}
         </div>
